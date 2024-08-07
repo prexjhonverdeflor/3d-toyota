@@ -1,4 +1,4 @@
-import React, { Suspense } from "react";
+import React, { Suspense, useState, useEffect } from "react";
 import { Canvas } from "@react-three/fiber";
 import {
   EffectComposer,
@@ -22,8 +22,6 @@ import styled from "styled-components";
 import Navbar from './Navbar';
 import Power from "./img/power.png";
 import Speed from "./img/speed.png";
-
-
 
 const CanvasContainer = styled.div`
   position: relative;
@@ -78,7 +76,7 @@ const SocialButton = styled.a`
   text-decoration: none; /* Remove underline from anchor tag */
 `;
 
-// Social component to render social media buttons in a row at the bottom-right corner
+
 const Social = styled.div`
   position: absolute;
   bottom: 0;
@@ -100,9 +98,43 @@ const SpeedImg = styled.div`
 `;
 
 
+const Preloader = styled.div`
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgb(18, 18, 18);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  transition: opacity 0.5s ease-out;
+`;
 
+const ProgressBar = styled.div`
+  width: 200px;
+  height: 5px;
+  background-color: #333;
+  border-radius: 5px;
+  overflow: hidden;
+`;
 
-function CarShow() {
+const Progress = styled.div`
+  width: 0%;
+  height: 100%;
+  background-color: #fff;
+  transition: width 0.5s ease-out;
+`;
+
+function CarShow({ onLoad }) {
+  useEffect(() => {
+    // Simulate loading time (remove this in production)
+    setTimeout(() => {
+      onLoad();
+    }, 3000);
+  }, [onLoad]);
+
   return (
     <>
       <OrbitControls 
@@ -149,13 +181,42 @@ function CarShow() {
 }
 
 function App() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [progress, setProgress] = useState(0);
+
+  const handleCarLoaded = () => {
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setProgress((prevProgress) => {
+        const newProgress = prevProgress + 10;
+        if (newProgress >= 100) {
+          clearInterval(interval);
+          return 100;
+        }
+        return newProgress;
+      });
+    }, 300);
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <>
+      {isLoading && (
+        <Preloader style={{ opacity: isLoading ? 1 : 0 }}>
+          <ProgressBar>
+            <Progress style={{ width: `${progress}%` }} />
+          </ProgressBar>
+        </Preloader>
+      )}
       <Navbar/>
       <CanvasContainer>
       <Canvas shadows>
         <Suspense fallback={null}>
-          <CarShow />
+          <CarShow onLoad={handleCarLoaded} />
         </Suspense>
       </Canvas>
     </CanvasContainer>
