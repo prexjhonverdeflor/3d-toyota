@@ -1,4 +1,4 @@
-import React, { Suspense, useCallback, useEffect, useState } from "react";
+import React, { Suspense, useCallback, useState } from "react";
 import { Canvas, useThree } from "@react-three/fiber";
 import {
   Environment,
@@ -38,7 +38,7 @@ function CarScene({ paint, onCarLoaded, autoRotate }) {
       />
       <OrbitControls
         autoRotate={autoRotate}
-        autoRotateSpeed={1}
+        autoRotateSpeed={2}
         enableDamping
         dampingFactor={0.08}
         target={[0, 0, 0]}
@@ -107,35 +107,22 @@ function ColorSelector({ selectedPaint, onSelect }) {
 function App() {
   const [selectedPaint, setSelectedPaint] = useState(PAINTS[0]);
   const [carLoaded, setCarLoaded] = useState(false);
-  const [reducedMotion, setReducedMotion] = useState(false);
   const { progress } = useProgress();
   const onCarLoaded = useCallback(() => setCarLoaded(true), []);
-
-  useEffect(() => {
-    const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const updatePreference = () => setReducedMotion(preference.matches);
-
-    updatePreference();
-    preference.addEventListener("change", updatePreference);
-    return () => preference.removeEventListener("change", updatePreference);
-  }, []);
 
   return (
     <div className="site-shell">
       <Navbar />
       <main>
-        <section className="hero" aria-labelledby="hero-title">
+        <section className="hero" id="top" aria-labelledby="hero-title">
           <div className="hero-wordmark" aria-hidden="true">
-            TOYOTA
-          </div>
-          <div className="hero-kanji" aria-hidden="true">
-            藤原とうふ店
+            TRUENO
           </div>
           <div className="hero-stage" aria-hidden="true">
             <Canvas
               shadows
               dpr={[1, 1.25]}
-              frameloop={reducedMotion ? "demand" : "always"}
+              frameloop="always"
               gl={{
                 antialias: true,
                 alpha: true,
@@ -149,16 +136,34 @@ function App() {
                 <CarScene
                   paint={selectedPaint.value}
                   onCarLoaded={onCarLoaded}
-                  autoRotate={!reducedMotion}
+                  autoRotate
                 />
               </Suspense>
             </Canvas>
           </div>
           <div className="hero-copy">
-            <p className="hero-overline">1983—1987&nbsp; / &nbsp;SPRINTER TRUENO</p>
-            <h1 id="hero-title">
-              AE86<span>Hachi-roku, unmistakable by design.</span>
+            <h1 id="hero-title" className="visually-hidden">
+              Toyota Sprinter Trueno AE86
             </h1>
+            <p>
+              The AE86 generation of the Toyota Corolla Levin and Sprinter
+              Trueno: a light, front-engine, rear-wheel-drive coupe introduced
+              in 1983.
+            </p>
+          </div>
+          <div className="hero-stat hero-stat-layout">
+            <span className="stat-mark" aria-hidden="true" />
+            <span>
+              <strong>Layout</strong>
+              Front engine / rear drive
+            </span>
+          </div>
+          <div className="hero-stat hero-stat-engine">
+            <span className="stat-mark" aria-hidden="true" />
+            <span>
+              <strong>Engine</strong>
+              4A-GE / 1.6 L
+            </span>
           </div>
           <ColorSelector
             selectedPaint={selectedPaint}
@@ -177,34 +182,13 @@ function App() {
             </div>
           )}
         </section>
-
-        <section className="story-section" id="story" aria-labelledby="story-title">
-          <div className="story-intro">
-            <p className="section-label">A driver's car</p>
-            <h2 id="story-title">Light on its feet.<br />Clear in its purpose.</h2>
-          </div>
-          <p className="story-copy">
-            The fifth-generation Corolla made a lasting case for balance:
-            front-engine, rear-wheel drive, and a compact shape that puts the
-            road ahead of the numbers.
-          </p>
-          <dl className="spec-list">
-            <div className="spec-item">
-              <dt>Production</dt>
-              <dd>1983—1987</dd>
-            </div>
-            <div className="spec-item">
-              <dt>Engine</dt>
-              <dd>4A-GE · 1.6 L</dd>
-            </div>
-            <div className="spec-item">
-              <dt>Layout</dt>
-              <dd>Front engine · rear drive</dd>
-            </div>
-          </dl>
-        </section>
       </main>
-      <footer className="site-footer">
+      <footer className="site-footer" id="contact">
+        <nav className="footer-social" aria-label="Social links">
+          <a href="https://www.facebook.com/preksdyan/" target="_blank" rel="noreferrer">Facebook</a>
+          <a href="https://www.instagram.com/prexverdeflor/" target="_blank" rel="noreferrer">Instagram</a>
+          <a href="https://www.linkedin.com/in/prex-jhon-verdeflor-586a46200/" target="_blank" rel="noreferrer">LinkedIn</a>
+        </nav>
         <a
           className="model-credit"
           href="https://sketchfab.com/3d-models/toyota-ae86-sprinter-trueno-zenki-a5737bf3cc9b4179a6e5ebe173ff70d9"
@@ -213,29 +197,6 @@ function App() {
         >
           3D model by Martin Trafas · CC BY 4.0
         </a>
-        <nav className="social-links" aria-label="Social links">
-          <a
-            href="https://www.facebook.com/preksdyan/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Facebook
-          </a>
-          <a
-            href="https://www.instagram.com/prexverdeflor/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Instagram
-          </a>
-          <a
-            href="https://www.linkedin.com/in/prex-jhon-verdeflor-586a46200/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            LinkedIn
-          </a>
-        </nav>
       </footer>
     </div>
   );
