@@ -1,40 +1,59 @@
-import React, { useEffect } from "react";
-import { useFrame, useLoader } from "@react-three/fiber";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
-import { Mesh } from "three";
+import React, { useEffect, useMemo } from "react";
+import { useGLTF } from "@react-three/drei";
 
-// based on "Chevrolet Corvette (C7)" (https://sketchfab.com/3d-models/chevrolet-corvette-c7-2b509d1bce104224b147c81757f6f43a) 
-// by Martin Trafas (https://sketchfab.com/Bexxie) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
-export function Car() {
-  const gltf = useLoader(
-    GLTFLoader,
-    process.env.PUBLIC_URL + "models/toyota/scene.gltf"
-  );
-  
-  
-  useEffect(() => {
-    gltf.scene.scale.set(0.005, 0.005, 0.005);
-    gltf.scene.position.set(0, -0.335, 0);
-    gltf.scene.traverse((object) => {
-      if (object instanceof Mesh) {
-        object.castShadow = true;
-        object.receiveShadow = true;
-        object.material.envMapIntensity = 20;
-      }
+const MODEL_URL = `${process.env.PUBLIC_URL}models/toyota/scene.gltf`;
+
+export function Car({ color, onLoad }) {
+  const { scene } = useGLTF(MODEL_URL);
+
+  const car = useMemo(() => {
+    const clone = scene.clone(true);
+    clone.scale.setScalar(0.005);
+    clone.position.set(0, -0.335, 0);
+
+    clone.traverse((object) => {
+      if (!object.isMesh) return;
+
+      object.castShadow = true;
+      object.receiveShadow = true;
+      object.material = Array.isArray(object.material)
+        ? object.material.map((material) => material.clone())
+        : object.material.clone();
+
+      const materials = Array.isArray(object.material)
+        ? object.material
+        : [object.material];
+      materials.forEach((material) => {
+        if ("envMapIntensity" in material) material.envMapIntensity = 1.15;
+      });
     });
-  }, [gltf]);
 
-  useFrame((state) => {
-    let t = state.clock.getElapsedTime();
+    return clone;
+  }, [scene]);
 
-    let group = gltf.scene.children[0].children[0].children[0];
+  useEffect(() => {
+    car.traverse((object) => {
+      if (
+        !object.isMesh ||
+        !/^CarBody_Primary_/.test(object.name)
+      ) {
+        return;
+      }
 
-    group.children[4].rotation.x = t * 3;
-    group.children[6].rotation.x = t * 3;
-    group.children[9].rotation.x = t * 3;
-    group.children[10].rotation.x = t * 3;
-    
-  });
+      const materials = Array.isArray(object.material)
+        ? object.material
+        : [object.material];
+      materials.forEach((material) => {
+        if (material.name === "Primary") material.color?.set(color);
+      });
+    });
+  }, [car, color]);
 
-  return <primitive object={gltf.scene} />;
+  useEffect(() => {
+    onLoad();
+  }, [car, onLoad]);
+
+  return <primitive object={car} dispose={null} />;
 }
+
+useGLTF.preload(MODEL_URL);

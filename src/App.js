@@ -1,258 +1,243 @@
-import React, { Suspense, useState, useEffect } from "react";
-import { Canvas } from "@react-three/fiber";
+import React, { Suspense, useCallback, useEffect, useState } from "react";
+import { Canvas, useThree } from "@react-three/fiber";
 import {
-  EffectComposer,
-  DepthOfField,
-  Bloom,
-  ChromaticAberration,
-} from "@react-three/postprocessing";
-import { BlendFunction } from "postprocessing";
-import {
-  CubeCamera,
   Environment,
   OrbitControls,
   PerspectiveCamera,
+  useProgress,
 } from "@react-three/drei";
+import { ACESFilmicToneMapping, PCFSoftShadowMap } from "three";
 import "./style.css";
-import { Boxes } from "./Boxes";
 import { Car } from "./Car";
-import { Ground } from "./Ground";
-import { FloatingGrid } from "./FloatingGrid";
-import styled from "styled-components";
-import Navbar from './Navbar';
-import Power from "./img/power.png";
-import Speed from "./img/speed.png";
+import Navbar from "./Navbar";
 
-const CanvasContainer = styled.div`
-  position: relative;
-  width: 100vw; /* Adjust width as needed */
-  height: 100vh; /* Adjust height as needed */
-  z-index: 2; /* Adjust z-index as needed */
-`;
-const HeadlineContainer = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: absolute;
-  top: -200px;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  pointer-events: none;
-  z-index: 1;
-`;
+const PAINTS = [
+  { name: "White", value: "#f1f0eb" },
+  { name: "Silver", value: "#b9bdc0" },
+  { name: "Light gray", value: "#85898c" },
+  { name: "Charcoal", value: "#45484a" },
+  { name: "Black", value: "#181a1c" },
+  { name: "Dark green", value: "#263c32" },
+  { name: "Dark red", value: "#692a30" },
+  { name: "Dark blue", value: "#293d54" },
+];
 
-const Title = styled.div`
-  position: absolute;
-  text-align: center;
-  font-family: 'Arial', sans-serif; 
-  font-size: 11rem;
-  font-weight: 800;
-  color: rgb(36, 36, 36);
-`;
-
-const Text = styled.div`
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  z-index: 100;
-  padding: 20px;
-  font-size: 13px;
-  width: 30%;
-  font-weight: bold;
-  font-family: 'Arial', sans-serif;
-`;
-
-
-const SocialButton = styled.a`
-  color: black;
-  padding: 10px 20px;
-  margin-right: 5px; /* Adjust spacing between buttons */
-  cursor: pointer;
-  font-size: 16px;
-  font-weight: bold;
-  font-family: 'Arial', sans-serif;
-  z-index: 100;
-  text-decoration: none; /* Remove underline from anchor tag */
-`;
-
-
-const Social = styled.div`
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  display: flex;
-  flex-direction: row; 
-  margin: 20px; /* Adjust margin as needed */
-`;
-const PowerImg = styled.div`
-  position: absolute;
-  left: 19rem;
-  bottom: 8rem;
-`;
-
-const SpeedImg = styled.div`
-  position: absolute;
-  right: 13rem;
-  top: 19rem;
-`;
-
-
-const Preloader = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgb(18, 18, 18);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 9999;
-  transition: opacity 0.5s ease-out;
-`;
-
-const ProgressBar = styled.div`
-  width: 200px;
-  height: 5px;
-  background-color: #333;
-  border-radius: 5px;
-  overflow: hidden;
-`;
-
-const Progress = styled.div`
-  width: 0%;
-  height: 100%;
-  background-color: #fff;
-  transition: width 0.5s ease-out;
-`;
-
-function CarShow({ onLoad }) {
-  useEffect(() => {
-    // Simulate loading time (remove this in production)
-    setTimeout(() => {
-      onLoad();
-    }, 3000);
-  }, [onLoad]);
+function CarScene({ paint, onCarLoaded, autoRotate }) {
+  const isMobile = useThree((state) => state.size.width <= 640);
 
   return (
     <>
-      <OrbitControls 
-        autoRotate
-        target={[0, -0.4, 0]}
-        maxPolarAngle={1.40}
-        minDistance={5}
-        maxDistance={10}
-
+      <PerspectiveCamera
+        makeDefault
+        fov={isMobile ? 36 : 25}
+        position={
+          isMobile
+            ? [8.6717, 1.179, 0]
+            : [2.6625, 0, 0]
+        }
       />
-
-      <PerspectiveCamera makeDefault fov={20} position={[4, 0, 5]} />
-
-      <CubeCamera resolution={256} frames={Infinity}>
-        {(texture) => (
-          <>
-            <Environment map={texture} />
-            <Car />
-          </>
-        )}
-      </CubeCamera>
-
-      <spotLight
-      
-        intensity={5}
-        angle={1}
-        penumbra={0.1}
-        position={[5, 5, 5]}
+      <OrbitControls
+        autoRotate={autoRotate}
+        autoRotateSpeed={1}
+        enableDamping
+        dampingFactor={0.08}
+        target={[0, 0, 0]}
+        minDistance={isMobile ? 8.8 : 4.8}
+        maxDistance={isMobile ? 11.5 : 9}
+        maxPolarAngle={Math.PI / 2.05}
+        minPolarAngle={Math.PI / 3.8}
+      />
+      <Environment
+        files={`${process.env.PUBLIC_URL}studio_small_05_1k.hdr`}
+      />
+      <ambientLight intensity={0.4} />
+      <directionalLight
+        position={[4, 7, 5]}
+        intensity={2.4}
         castShadow
-        shadow-bias={1}
+        shadow-mapSize={[1024, 1024]}
+        shadow-camera-near={0.5}
+        shadow-camera-far={18}
       />
-      <spotLight
-        intensity={5}
-        angle={1}
-        penumbra={0.1}
-        position={[-5, -5, -10]}
-        castShadow
-        shadow-bias={1}
-      />
-   
-      <FloatingGrid />
+      <directionalLight position={[-5, 3, -4]} intensity={0.75} />
+      <pointLight position={[-4, 1, 2]} intensity={0.45} color="#9b2930" />
+      <mesh
+        rotation-x={-Math.PI / 2}
+        position={[0, -0.5, 0]}
+        receiveShadow
+      >
+        <planeGeometry args={[80, 80]} />
+        <shadowMaterial transparent opacity={0.4} />
+      </mesh>
+      <Car color={paint} onLoad={onCarLoaded} />
     </>
   );
 }
 
-function App() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [progress, setProgress] = useState(0);
+function ColorSelector({ selectedPaint, onSelect }) {
+  return (
+    <fieldset className="color-selector" id="colors">
+      <legend className="color-heading">Body paint</legend>
+      <span className="selected-paint" aria-live="polite">
+        {selectedPaint.name}
+      </span>
+      <div className="swatch-list" role="group" aria-label="Choose body paint">
+        {PAINTS.map((paint) => (
+          <button
+            className="swatch-button"
+            type="button"
+            key={paint.name}
+            aria-label={`${paint.name} body paint`}
+            aria-pressed={selectedPaint.name === paint.name}
+            title={paint.name}
+            onClick={() => onSelect(paint)}
+          >
+            <span
+              className="swatch"
+              style={{ "--swatch-color": paint.value }}
+              aria-hidden="true"
+            />
+          </button>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
 
-  const handleCarLoaded = () => {
-    setIsLoading(false);
-  };
+function App() {
+  const [selectedPaint, setSelectedPaint] = useState(PAINTS[0]);
+  const [carLoaded, setCarLoaded] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
+  const { progress } = useProgress();
+  const onCarLoaded = useCallback(() => setCarLoaded(true), []);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setProgress((prevProgress) => {
-        const newProgress = prevProgress + 10;
-        if (newProgress >= 100) {
-          clearInterval(interval);
-          return 100;
-        }
-        return newProgress;
-      });
-    }, 300);
+    const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const updatePreference = () => setReducedMotion(preference.matches);
 
-    return () => clearInterval(interval);
+    updatePreference();
+    preference.addEventListener("change", updatePreference);
+    return () => preference.removeEventListener("change", updatePreference);
   }, []);
 
   return (
-    <>
-      {isLoading && (
-        <Preloader style={{ opacity: isLoading ? 1 : 0 }}>
-          <ProgressBar>
-            <Progress style={{ width: `${progress}%` }} />
-          </ProgressBar>
-        </Preloader>
-      )}
-      <Navbar/>
-      <CanvasContainer>
-      <Canvas shadows>
-        <Suspense fallback={null}>
-          <CarShow onLoad={handleCarLoaded} />
-        </Suspense>
-      </Canvas>
-    </CanvasContainer>
-     
-      <HeadlineContainer>
-          <Title id="text" >TRUENO</Title>
-          
-      </HeadlineContainer>
+    <div className="site-shell">
+      <Navbar />
+      <main>
+        <section className="hero" aria-labelledby="hero-title">
+          <div className="hero-wordmark" aria-hidden="true">
+            TOYOTA
+          </div>
+          <div className="hero-kanji" aria-hidden="true">
+            藤原とうふ店
+          </div>
+          <div className="hero-stage" aria-hidden="true">
+            <Canvas
+              shadows
+              dpr={[1, 1.25]}
+              frameloop={reducedMotion ? "demand" : "always"}
+              gl={{
+                antialias: true,
+                alpha: true,
+                powerPreference: "high-performance",
+                toneMapping: ACESFilmicToneMapping,
+                toneMappingExposure: 1.15,
+                shadowMap: { enabled: true, type: PCFSoftShadowMap },
+              }}
+            >
+              <Suspense fallback={null}>
+                <CarScene
+                  paint={selectedPaint.value}
+                  onCarLoaded={onCarLoaded}
+                  autoRotate={!reducedMotion}
+                />
+              </Suspense>
+            </Canvas>
+          </div>
+          <div className="hero-copy">
+            <p className="hero-overline">1983—1987&nbsp; / &nbsp;SPRINTER TRUENO</p>
+            <h1 id="hero-title">
+              AE86<span>Hachi-roku, unmistakable by design.</span>
+            </h1>
+          </div>
+          <ColorSelector
+            selectedPaint={selectedPaint}
+            onSelect={setSelectedPaint}
+          />
+          {!carLoaded && (
+            <div className="loading-screen" role="status" aria-live="polite">
+              <span className="loading-title">Preparing the AE86</span>
+              <span className="loading-track">
+                <span
+                  style={{
+                    transform: `scaleX(${Math.max(progress, 6) / 100})`,
+                  }}
+                />
+              </span>
+            </div>
+          )}
+        </section>
 
-     
-     <PowerImg>
-        <img src={Power} style={{ width: '130px', height: 'auto', }}/>
-     </PowerImg>
-
-     <SpeedImg>
-        <img src={Speed} style={{ width: '150px', height: 'auto', }}/>
-     </SpeedImg>
-      
-
-      <Text>
-        AE86は、トヨタが1983年から1987年にかけて製造したスポーツカーで、特にドリフトやモータースポーツの愛好家に愛されています。
-        <hr style={{ borderTop: '4px solid #000', width: '100%' }} />
-      </Text>
-
-      <Social>
-      <SocialButton href="https://www.facebook.com/preksdyan/" target="_blank" rel="noopener noreferrer">
-        Facebook
-      </SocialButton>
-      <SocialButton href="https://www.instagram.com/prexverdeflor/" target="_blank" rel="noopener noreferrer">
-        Instagram
-      </SocialButton>
-      <SocialButton href="https://www.linkedin.com/in/prex-jhon-verdeflor-586a46200/" target="_blank" rel="noopener noreferrer">
-        LinkedIn
-      </SocialButton>
-    </Social>
-    </>
+        <section className="story-section" id="story" aria-labelledby="story-title">
+          <div className="story-intro">
+            <p className="section-label">A driver's car</p>
+            <h2 id="story-title">Light on its feet.<br />Clear in its purpose.</h2>
+          </div>
+          <p className="story-copy">
+            The fifth-generation Corolla made a lasting case for balance:
+            front-engine, rear-wheel drive, and a compact shape that puts the
+            road ahead of the numbers.
+          </p>
+          <dl className="spec-list">
+            <div className="spec-item">
+              <dt>Production</dt>
+              <dd>1983—1987</dd>
+            </div>
+            <div className="spec-item">
+              <dt>Engine</dt>
+              <dd>4A-GE · 1.6 L</dd>
+            </div>
+            <div className="spec-item">
+              <dt>Layout</dt>
+              <dd>Front engine · rear drive</dd>
+            </div>
+          </dl>
+        </section>
+      </main>
+      <footer className="site-footer">
+        <a
+          className="model-credit"
+          href="https://sketchfab.com/3d-models/toyota-ae86-sprinter-trueno-zenki-a5737bf3cc9b4179a6e5ebe173ff70d9"
+          target="_blank"
+          rel="noreferrer"
+        >
+          3D model by Martin Trafas · CC BY 4.0
+        </a>
+        <nav className="social-links" aria-label="Social links">
+          <a
+            href="https://www.facebook.com/preksdyan/"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Facebook
+          </a>
+          <a
+            href="https://www.instagram.com/prexverdeflor/"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Instagram
+          </a>
+          <a
+            href="https://www.linkedin.com/in/prex-jhon-verdeflor-586a46200/"
+            target="_blank"
+            rel="noreferrer"
+          >
+            LinkedIn
+          </a>
+        </nav>
+      </footer>
+    </div>
   );
 }
 
